@@ -7,13 +7,15 @@
 
 ## 📌 系統需求
 
+## 📌 系統需求
+
 | 元件 | 版本需求 |
 |------|----------|
-| PHP | 8.x（XAMPP 任意版本） |
-| MySQL | 5.7 / 8.x |
-| MongoDB Community Server | 6 / 7 / 8 |
-| Composer | 最新版本 |
-| MongoDB PHP Driver | 已提供 DLL |
+| PHP | v8.1.25（XAMPP 內建） |
+| MariaDB（相容 MySQL） | v10.4.32（相容 MySQL 5.7） |
+| MongoDB Community Server | v8.2.0 |
+| Composer | v2.7.7 |
+| MongoDB PHP Driver | v2.1.0（已安裝，支援 libmongoc/libbson 1.30.4） |
 
 ---
 
@@ -30,9 +32,6 @@ hospital/
 │── composer.json
 │── composer.lock
 │── mongo_data/ # ⚠️ MongoDB 資料庫檔案，不要上傳 GitHub
-
-yaml
-複製程式碼
 
 ---
 
@@ -67,13 +66,8 @@ Compass 可用於查看 collections 與資料。
 
 hospital/mongo_data/
 
-yaml
-複製程式碼
-
 ⚠️ 注意：  
 此資料夾是 **MongoDB 實體資料檔**，  
-每台電腦不同，**不能上傳 GitHub**。
-
 ---
 
 ## ⭐ 5. 安裝 MongoDB PHP Driver
@@ -106,8 +100,6 @@ extension=
 
 extension=mongodb
 
-yaml
-複製程式碼
 
 3. 重啟 Apache
 
