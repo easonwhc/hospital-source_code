@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>藥師工作台 - 待配藥清單</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h2 {
+            color: #007bff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>💊 藥師工作台 - 待處理配藥清單</h2>
+
+    <table id="prescriptionList">
+        <thead>
+            <tr>
+                <th>結果 ID</th>
+                <th>病人姓名</th>
+                <th>看診時間</th>
+                <th>診斷</th>
+                <th>醫囑</th>
+                <th>處方（藥品/數量）</th>
+                <th>動作</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+
+        window.onload = () => fetchPrescriptions();
+
+        /* --------------------------------
+           抓資料
+        -------------------------------- */
+        function fetchPrescriptions() {
+            fetch("get_prescriptions.php")
+                .then(res => res.json())
+                .then(data => renderData(data))
+                .catch(err => alert("Loading error: " + err.message));
+        }
+
+        /* --------------------------------
+           產生表格
+        -------------------------------- */
+        function renderData(data) {
+            const tableBody = document.querySelector("#prescriptionList tbody");
+            tableBody.innerHTML = "";
+
+            if (!data.success || data.prescriptions.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7">目前沒有資料。</td></tr>`;
+                return;
+            }
+
+            data.prescriptions.forEach(item => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+            <td>${item.diagnosis_result_id}</td>
+            <td>${item.patient_name}</td>
+            <td>${item.visit_time}</td>
+            <td>${item.diagnosis}</td>
+            <td>${item.doctor_advice || "無"}</td>
+            <td>${item.medications}</td>
+            <td>${renderActions(item)}</td>
+        `;
+            });
+        }
+
+        /* --------------------------------
+           動作按鈕 UI
+        -------------------------------- */
+        function renderActions(item) {
+
+            if (item.med_status === "Completed") {
+                return `<span style="color:green;font-weight:bold;">已完成</span>`;
+            }
+
+            if (item.med_status === "Rejected") {
+                return `
+            <span style="color:red;font-weight:bold;">已退回</span><br>
+            <small>原因：${item.reject_reason}</small>
+        `;
+            }
+
+            return `
+        <button onclick="handleDispense(${item.diagnosis_result_id})">配藥完成</button>
+        <button onclick="rejectPrescription(${item.diagnosis_result_id})" style="background-color:#dc3545;">退回</button>
+    `;
+        }
+
+        /* --------------------------------
+           配藥完成
+        -------------------------------- */
+        function handleDispense(id) {
+
+            if (!confirm("確認已完成配藥？")) return;
+
+            fetch("dispense_medication.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    diagnosis_result_id: id,
+                    pharmacist_id: 1
+                })
+            })
+                .then(res => res.json())
+                .then(result => {
+                    alert(result.message);
+                    fetchPrescriptions();
+                })
+                .catch(err => alert("錯誤：" + err.message));
+        }
+
+        /* --------------------------------
+           退回醫師
+        -------------------------------- */
+        function rejectPrescription(id) {
+
+            const reason = prompt("請輸入退回原因：");
+            if (!reason) return;
+
+            fetch("reject_prescription.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    diagnosis_result_id: id,
+                    reject_reason: reason
+                })
+            })
+                .then(res => res.json())
+                .then(result => {
+                    alert(result.message);
+                    fetchPrescriptions();
+                })
+                .catch(err => alert("錯誤：" + err.message));
+        }
+
+    </script>
+
+</body>
+
+</html>

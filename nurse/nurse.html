@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>護理師照護系統 - 工作站</title>
+    <style>
+        /* (CSS 樣式與之前版本相似，只新增了待分配區域的樣式) */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0;
+            color: #333;
+        }
+
+        .waiting-area {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .waiting-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .waiting-patient {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .waiting-patient button {
+            margin-left: 10px;
+            background: #20c997;
+            color: white;
+            border: none;
+            padding: 5px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .waiting-patient button:hover {
+            background: #1faa83;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .ward-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid #ccc;
+            position: relative;
+        }
+
+        .ward-card.occupied {
+            border-left-color: #28a745;
+        }
+
+        .ward-card.isolated {
+            border-left-color: #dc3545;
+        }
+
+        .ward-card.cleaning {
+            border-left-color: #ffc107;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .ward-name {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            color: white;
+            background: #6c757d;
+        }
+
+        .patient-info {
+            margin-bottom: 15px;
+        }
+
+        .info-row {
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .sign-status {
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .sign-completed {
+            color: #155724;
+            background-color: #d4edda;
+        }
+
+        .sign-pending {
+            color: #721c24;
+            background-color: #f8d7da;
+        }
+
+        .action-area {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            cursor: pointer;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 0.9em;
+            transition: 0.3s;
+        }
+
+        .btn-care {
+            background-color: #007bff;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-care:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-care:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            color: #666;
+        }
+
+        .ward-select {
+            width: 100%;
+            padding: 5px;
+            margin-top: 5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            width: 400px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>護理師工作站 (Nurse Station)</h1>
+        <div>當前護理師 ID: 1</div>
+    </div>
+
+    <div class="waiting-area">
+        <h3>🏠 待分配病患</h3>
+        <div id="waitingList" class="waiting-list">
+        </div>
+    </div>
+
+    <div class="dashboard-grid" id="wardList">
+        <div style="text-align:center; width:100%">載入中...</div>
+    </div>
+
+    <div id="careModal" class="modal">
+        <div class="modal-content">
+            <h3>執行照護 / 用藥紀錄</h3>
+            <p>病人: <span id="modalPatientName"></span></p>
+            <textarea id="logContent" placeholder="請輸入照護內容、體溫、血壓或用藥狀況..."></textarea>
+            <div style="text-align: right;">
+                <button onclick="closeModal('careModal')" style="background:#6c757d; color:white;">取消</button>
+                <button onclick="submitCareLog()" style="background:#28a745; color:white;">確認送出</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="allocateModal" class="modal">
+        <div class="modal-content">
+            <h3>分配病房</h3>
+            <p>病人: <span id="allocatePatientName"></span></p>
+            <label>選擇空病房:</label>
+            <select id="availableWards" class="ward-select">
+            </select>
+            <div style="text-align: right; margin-top: 15px;">
+                <button onclick="closeModal('allocateModal')" style="background:#6c757d; color:white;">取消</button>
+                <button onclick="submitAllocation()" style="background:#007bff; color:white;">確認分配</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="transferModal" class="modal">
+        <div class="modal-content">
+            <h3>轉移病房</h3>
+            <p>將 <span id="transferPatientName"></span> 從 <span id="transferOldWard"></span> 轉移到:</p>
+            <label>選擇新病房 (必須是空床):</label>
+            <select id="transferAvailableWards" class="ward-select">
+            </select>
+            <div style="text-align: right; margin-top: 15px;">
+                <button onclick="closeModal('transferModal')" style="background:#6c757d; color:white;">取消</button>
+                <button onclick="submitTransfer()" style="background:#dc3545; color:white;">確認轉移</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'api';   // 之後會變成 api/xxx.php
+        const NURSE_ID = 1;
+        let currentPatientId = null;
+        let currentSignStatus = null;
+        let currentOldWardId = null;
+        let allWards = []; // 用於存儲所有病房 (包含空病房) 的列表
+
+        // --- 核心資料載入 ---
+        async function loadDashboard() {
+            try {
+                // 1. 讀取儀表板資料
+                const wardRes = await fetch(`${API_URL}/dashboard.php`);
+                const wardJson = await wardRes.json();
+                allWards = wardJson.data;
+                renderWards(allWards);
+
+                // 2. 讀取待分配病患
+                const waitingRes = await fetch(`${API_URL}/waiting_patients.php`);
+                const waitingJson = await waitingRes.json();
+                renderWaitingPatients(waitingJson.data);
+
+            } catch (error) {
+                console.error(error);
+                alert("後端連線失敗：" + error);
+            }
+        }
+
+        // --- 渲染邏輯 ---
+
+        function getStatusColor(status) {
+            if (status === 'occupied') return '#28a745';
+            if (status === 'isolated') return '#dc3545';
+            if (status === 'cleaning') return '#ffc107';
+            return '#6c757d';
+        }
+
+        // 渲染病房卡片 (修正版)
+        function renderWards(wards) {
+            const container = document.getElementById('wardList');
+            container.innerHTML = ''; // 清空舊內容
+
+            wards.forEach(ward => {
+                const isSigned = ward.doctor_sign_status === 'Completed';
+                const hasPatient = ward.patient_id != null;
+
+                let signBadge = '';
+                if (hasPatient) {
+                    signBadge = isSigned
+                        ? `<span class="sign-status sign-completed">✅ 醫師已簽核</span>`
+                        : `<span class="sign-status sign-pending">⚠ 醫師未簽核</span>`;
+                }
+
+                const btnDisabled = !hasPatient || !isSigned;
+                const btnText = !hasPatient ? '無病人' : (!isSigned ? '需醫師簽核才可執行' : '執行照護 & 用藥');
+
+                // 轉移按鈕邏輯 (必須在迴圈內定義，才能使用 ward 變數)
+                const transferBtn = hasPatient && ward.ward_status === 'occupied' ?
+                    `<button style="background:#ff7f50; color:white; width:100%" onclick='openTransferModal(${ward.patient_id}, ${JSON.stringify(ward.patient_name)}, ${ward.ward_id})'>轉移病房</button>` : '';
+
+                // 辦理出院按鈕邏輯 (必須在迴圈內定義)
+                const dischargeBtn = hasPatient && ward.ward_status === 'occupied' ?
+                    `<button style="background:#000080; color:white; width:100%" onclick="dischargePatient(${ward.patient_id}, '${ward.patient_name}')">辦理出院</button>` : '';
+
+                const html = `
+            <div class="ward-card ${ward.ward_status}">
+                <div class="card-header">
+                    <span class="ward-name">${ward.ward_name} (ID: ${ward.ward_id})</span>
+                    <span class="status-badge" style="background:${getStatusColor(ward.ward_status)}">${ward.ward_status}</span>
+                </div>
+                
+                <div class="patient-info">
+                    ${hasPatient ? `
+                        <div class="info-row"><strong>👤 病人:</strong> ${ward.patient_name} (ID: ${ward.patient_id})</div>
+                        <div class="info-row"><strong>💉 診斷:</strong> ${ward.diagnosis || '無'}</div>
+                        <div class="info-row"><strong>💊 處方:</strong> ${ward.prescription || '無'}</div>
+                        <div class="info-row">${signBadge}</div>
+                    ` : `<div style="color:#999; padding: 20px 0;">目前空床</div>`}
+                </div>
+
+                <div class="action-area">
+                    <button class="btn-care" 
+                        onclick="openCareModal(${ward.patient_id}, '${ward.patient_name}', '${ward.doctor_sign_status}')" 
+                        ${btnDisabled ? 'disabled' : ''}>
+                        ${btnText}
+                    </button>
+                    ${transferBtn}
+                    ${dischargeBtn} 
+                    
+                    <label style="font-size:0.8em; margin-top:5px;">病房狀態管理:</label>
+                    <select class="ward-select" onchange="updateWardStatus(${ward.ward_id}, this.value)">
+                        <option value="occupied" ${ward.ward_status === 'occupied' ? 'selected' : ''} ${hasPatient ? '' : 'disabled'}>使用中 (Occupied)</option>
+                        <option value="empty" ${ward.ward_status === 'empty' ? 'selected' : ''}>空床 (Empty)</option>
+                        <option value="isolated" ${ward.ward_status === 'isolated' ? 'selected' : ''}>隔離 (Isolated)</option>
+                        <option value="cleaning" ${ward.ward_status === 'cleaning' ? 'selected' : ''}>清潔中 (Cleaning)</option>
+                    </select>
+                </div>
+            </div>
+        `;
+                container.innerHTML += html;
+            });
+
+
+
+
+        }
+
+        // nurse_dashboard.html - 在 <script> 標籤內新增
+
+        // 提交出院申請
+        async function dischargePatient(patientId, patientName) {
+            if (!confirm(`確定要為病患 ${patientName} (ID: ${patientId}) 辦理出院手續嗎？`)) {
+                return;
+            }
+
+            const res = await fetch(`${API_URL}/discharge_patient.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: patientId
+                })
+            });
+
+            const result = await res.json();
+            alert(result.success ? result.message : '出院辦理失敗：' + result.message);
+
+            loadDashboard();
+        }
+
+        // ... (其他 JavaScript 函數，如 submitCareLog, submitAllocation, submitTransfer 等)
+
+        // 渲染待分配病患列表
+        function renderWaitingPatients(patients) {
+            const container = document.getElementById('waitingList');
+            container.innerHTML = '';
+
+            if (patients.length === 0) {
+                container.innerHTML = '沒有等待分配病房的新病患。';
+                return;
+            }
+
+            patients.forEach(p => {
+                const html = `
+                    <div class="waiting-patient">
+                        <span>👤 ${p.name} (ID: ${p.patient_id})</span>
+                        <button onclick="openAllocateModal(${p.patient_id}, '${p.name}')">分配病房</button>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        // --- Modal 開啟/關閉 ---
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // 開啟照護 Modal
+        function openCareModal(patientId, name, signStatus) {
+            // ... (同舊版邏輯)
+            if (!patientId || signStatus !== 'Completed') {
+                if (patientId) alert('⚠ 醫師尚未簽核，無法執行照護！');
+                return;
+            }
+            currentPatientId = patientId;
+            currentSignStatus = signStatus;
+            document.getElementById('modalPatientName').innerText = name;
+            document.getElementById('logContent').value = '';
+            document.getElementById('careModal').style.display = 'flex';
+        }
+
+        // 開啟分配 Modal
+        function openAllocateModal(patientId, name) {
+            currentPatientId = patientId;
+            document.getElementById('allocatePatientName').innerText = name;
+
+            const select = document.getElementById('availableWards');
+            select.innerHTML = ''; // 清空舊選項
+
+            // 找出所有 empty 狀態的病房
+            const emptyWards = allWards.filter(w => w.ward_status === 'empty');
+
+            if (emptyWards.length === 0) {
+                alert('目前沒有可用的空病房進行分配。');
+                return;
+            }
+
+            emptyWards.forEach(ward => {
+                const option = document.createElement('option');
+                option.value = ward.ward_id;
+                option.innerText = `${ward.ward_name} (ID: ${ward.ward_id})`;
+                select.appendChild(option);
+            });
+
+            document.getElementById('allocateModal').style.display = 'flex';
+        }
+
+        // 開啟轉移 Modal
+        function openTransferModal(patientId, name, oldWardId) {
+            currentPatientId = patientId;
+            currentOldWardId = oldWardId;
+            document.getElementById('transferPatientName').innerText = name;
+            document.getElementById('transferOldWard').innerText = oldWardId;
+
+            const select = document.getElementById('transferAvailableWards');
+            select.innerHTML = ''; // 清空舊選項
+
+            const emptyWards = allWards.filter(w => w.ward_status === 'empty');
+
+            if (emptyWards.length === 0) {
+                alert('目前沒有可用的空病房進行轉移。');
+                return;
+            }
+
+            emptyWards.forEach(ward => {
+                const option = document.createElement('option');
+                option.value = ward.ward_id;
+                option.innerText = `${ward.ward_name} (ID: ${ward.ward_id})`;
+                select.appendChild(option);
+            });
+
+            document.getElementById('transferModal').style.display = 'flex';
+        }
+
+        // --- 提交邏輯 ---
+
+        // 提交照護紀錄
+        async function submitCareLog() {
+            const content = document.getElementById('logContent').value.trim();
+            if (!content) return alert('請輸入照護內容');
+
+            const res = await fetch(`${API_URL}/care_log.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nurse_id: NURSE_ID,
+                    patient_id: currentPatientId,
+                    log_content: content,
+                    doctor_sign_status: currentSignStatus
+                })
+            });
+
+            const result = await res.json();
+            alert(result.success ? '照護紀錄已成功儲存！' : '失敗：' + result.message);
+            closeModal('careModal');
+            loadDashboard();
+        }
+
+        // 提交分配病房
+        async function submitAllocation() {
+            const wardId = document.getElementById('availableWards').value;
+            if (!wardId) return alert("請選擇病房");
+
+            const res = await fetch(`${API_URL}/allocate_ward.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: currentPatientId,
+                    ward_id: wardId
+                })
+            });
+
+            const result = await res.json();
+            alert(result.success ? '病房分配成功！' : '分配失敗：' + result.message);
+
+            closeModal('allocateModal');
+            loadDashboard();
+        }
+
+
+        // 提交轉移病房
+        async function submitTransfer() {
+            const newWardId = document.getElementById('transferAvailableWards').value;
+            if (!newWardId) return alert('請選擇新病房');
+            if (newWardId == currentOldWardId) return alert('新病房不能與舊病房相同！');
+
+            const res = await fetch(`${API_URL}/transfer_ward.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: currentPatientId,
+                    new_ward_id: newWardId        // ★ 符合後端要求
+                })
+            });
+
+            const result = await res.json();
+            alert(result.success ? result.message : '轉移失敗：' + result.message);
+
+            closeModal('transferModal');
+            loadDashboard();
+        }
+
+
+
+
+        // 更新病房狀態 (維持舊版邏輯)
+        async function updateWardStatus(wardId, newStatus) {
+            // ... (同舊版邏輯)
+            try {
+                const res = await fetch(`${API_URL}/update_ward_status.php?ward_id=${wardId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    console.log(`病房 ${wardId} 狀態更新成功: ${newStatus}`);
+                } else {
+                    alert('更新狀態失敗: ' + result.message);
+                }
+            } catch (error) {
+                alert('網路錯誤，無法更新病房狀態');
+            }
+            loadDashboard();
+        }
+
+        // 初始化
+        loadDashboard();
+    </script>
+</body>
+
+</html>
