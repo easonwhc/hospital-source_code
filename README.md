@@ -67,7 +67,7 @@ Compass 可用於查看 collections 與資料。
 hospital/mongo_data/
 
 ⚠️ 注意：  
-此資料夾是 **MongoDB 實體資料檔**，  
+此資料夾是 **MongoDB 實體資料檔**
 ---
 
 ## ⭐ 5. 安裝 MongoDB PHP Driver
