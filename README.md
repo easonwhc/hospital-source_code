@@ -20,7 +20,7 @@
 ---
 
 # 📁 專案結構
-
+```
 hospital/
 │── db/
 │── doctor/
@@ -31,8 +31,8 @@ hospital/
 │── vendor/ # Composer 會自動生成
 │── composer.json
 │── composer.lock
-│── mongo_data/ # ⚠️ MongoDB 資料庫檔案，不要上傳 GitHub
-
+│── mongo_data/ 
+```
 ---
 
 # 🧰 安裝步驟
